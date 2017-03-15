@@ -6,6 +6,7 @@ import qualified Propellor.Property.Apt as Apt
 import qualified Propellor.Property.Cron as Cron
 import qualified Propellor.Property.User as User
 import qualified Propellor.Property.Git as Git
+import qualified Propellor.Property.HostingProvider.DigitalOcean as DigitalOcean
 import qualified JSMESS
 import System.Directory
 import System.FilePath.Posix
@@ -21,8 +22,8 @@ hosts = [ buildmachine
 -- sets up a machine to build on
 buildmachine :: Host
 buildmachine = host "glowing-computing-machine.db48x.net" $ props
-    & osDebian Unstable X86_64
-    & Apt.stdSourcesList
+    & osBuntish "16.04" X86_64
+    & DigitalOcean.distroKernel
     & Apt.unattendedUpgrades
     & Apt.installed ["ssh"]
     & User.hasSomePassword (User "root")
