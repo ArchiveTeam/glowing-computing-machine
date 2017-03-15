@@ -38,6 +38,7 @@ buildmachine = host "glowing-computing-machine.db48x.net" $ props
     & check (not <$> doesFileExist emsdktar)
       (cmdProperty "wget" [ "https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-portable.tar.gz"
                           , "-O", emsdktar])
+    & Apt.installed [ "cmake" ]
     & check (not <$> doesFileExist emsdk)
       (cmdProperty "tar" ["xf", emsdktar
                           , "-C", srcdir </> "emsdk"
