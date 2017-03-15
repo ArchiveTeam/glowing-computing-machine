@@ -20,7 +20,7 @@ hosts = [ buildmachine
 
 -- sets up a machine to build on
 buildmachine :: Host
-buildmachine = host "buildmachine.archiveteam.org" $ props
+buildmachine = host "glowing-computing-machine.db48x.net" $ props
     & osDebian Unstable X86_64
     & Apt.stdSourcesList
     & Apt.unattendedUpgrades
