@@ -33,18 +33,22 @@ buildmachine = host "glowing-computing-machine.db48x.net" $ props
 --   & JSMESS.admin (User "sketchcow") [""]
 --   & JSMESS.admin (User "bai") [""]
 --   & JSMESS.admin (User "vito") [""]
+    & Apt.installed [ "vim", "emacs-nox", "nano" ] -- gotta have the right editor
+    & Apt.installed [ "mosh", "tmux", "screen" ]
     & Apt.buildDep [ "mame", "dosbox" ]
+    & Apt.installed [ "build-essential", "cmake", "python2.7", "nodejs", "default-jre" ] -- emscripten's dependencies
     & JSMESS.staffOwned (srcdir </> "emsdk")
     & check (not <$> doesFileExist emsdktar)
       (cmdProperty "wget" [ "https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-portable.tar.gz"
-                          , "-O", emsdktar])
-    & Apt.installed [ "cmake" ]
+                          , "-O", emsdktar ])
     & check (not <$> doesFileExist emsdk)
-      (cmdProperty "tar" ["xf", emsdktar
-                          , "-C", srcdir </> "emsdk"
-                          , "--strip-components=1"])
+      (cmdProperty "tar" [ "xf", emsdktar
+                         , "-C", srcdir </> "emsdk"
+                         , "--strip-components=1" ])
     & cmdProperty emsdk [ "update" ] `assume` MadeChange
-    & cmdProperty emsdk [ "install", "sdk-incoming-64bit" ] `assume` MadeChange
+    & cmdProperty emsdk [ "install", "sdk-incoming-64bit"
+                        , "-j4"
+                        ] `assume` MadeChange
     & JSMESS.staffOwned (srcdir </> "dosbox")
     & Git.cloned (User "db48x") "https://github.com/dreamlayers/em-dosbox/" (srcdir </> "dosbox") (Just "master")
     & JSMESS.staffOwned (srcdir </> "mame")
