@@ -26,7 +26,7 @@ buildmachine = host "glowing-computing-machine.db48x.net" $ props
     & DigitalOcean.distroKernel
     & Apt.unattendedUpgrades
     & Apt.installed ["ssh"]
-    & User.hasSomePassword (User "root")
+    & User.lockedPassword (User "root")
     & Cron.runPropellor (Cron.Times "30 * * * *")
     & JSMESS.admin (User "db48x") [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAAMFoRm8trenxhZWe6dDEB2c6POPbsPfM5ArZep9lU+ db48x@anglachel"
                                   , "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJQkqIgZ7D8WHW5Y3o+fpZC/4xtv/3IQrORJrTPCt7KY db48x@erebor" ]
@@ -45,10 +45,10 @@ buildmachine = host "glowing-computing-machine.db48x.net" $ props
       (cmdProperty "tar" [ "xf", emsdktar
                          , "-C", srcdir </> "emsdk"
                          , "--strip-components=1" ])
-    & cmdProperty emsdk [ "update" ] `assume` MadeChange
-    & cmdProperty emsdk [ "install", "sdk-incoming-64bit"
-                        , "-j4"
-                        ] `assume` MadeChange
+--    & cmdProperty emsdk [ "update" ] `assume` MadeChange
+--    & cmdProperty emsdk [ "install", "sdk-incoming-64bit"
+--                        , "-j4"
+--                        ] `assume` MadeChange
     & JSMESS.staffOwned (srcdir </> "dosbox")
     & Git.cloned (User "db48x") "https://github.com/dreamlayers/em-dosbox/" (srcdir </> "dosbox") (Just "master")
     & JSMESS.staffOwned (srcdir </> "mame")
