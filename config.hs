@@ -45,10 +45,10 @@ buildmachine = host "glowing-computing-machine.db48x.net" $ props
       (cmdProperty "tar" [ "xf", emsdktar
                          , "-C", srcdir </> "emsdk"
                          , "--strip-components=1" ])
---    & cmdProperty emsdk [ "update" ] `assume` MadeChange
---    & cmdProperty emsdk [ "install", "sdk-incoming-64bit"
---                        , "-j4"
---                        ] `assume` MadeChange
+    & cmdProperty emsdk [ "update" ] `assume` MadeChange
+    & cmdProperty emsdk [ "install", "sdk-incoming-64bit"
+                        , "-j4"
+                        ] `assume` MadeChange
     & JSMESS.staffOwned (srcdir </> "dosbox")
     & Git.cloned (User "db48x") "https://github.com/dreamlayers/em-dosbox/" (srcdir </> "dosbox") (Just "master")
     & JSMESS.staffOwned (srcdir </> "mame")
