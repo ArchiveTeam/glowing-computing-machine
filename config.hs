@@ -24,6 +24,7 @@ buildmachine :: Host
 buildmachine = host "glowing-computing-machine.db48x.net" $ props
     & osBuntish "16.04" X86_64
     & DigitalOcean.distroKernel
+    & JSMESS.swapFile "/swap" "4GB" -- needed about 3GB of swap in testing, on a machine with 8GB of ram
     & Apt.unattendedUpgrades
     & Apt.installed ["ssh"]
     & User.lockedPassword (User "root")

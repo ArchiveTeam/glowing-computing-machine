@@ -1,12 +1,18 @@
-module JSMESS where
+module JSMESS ( admin
+              , staffOwned
+              , swapFile
+              , DataSize ) where
 
 import Propellor
+import System.Directory
 import System.Posix.Files
 import Utility.FileMode
+import qualified Utility.DataUnits as DataUnits
 import qualified Propellor.Property.File as File
 import qualified Propellor.Property.Ssh as Ssh
 import qualified Propellor.Property.User as User
 import qualified Propellor.Property.Sudo as Sudo
+import qualified Propellor.Property.Fstab as Fstab
 
 foldi            :: (a -> a -> a) -> a -> [a] -> a
 foldi f z []     = z
@@ -33,3 +39,18 @@ staffOwned path = propertyList ("path "++ path ++" is owned by staff") $ props
                                     , groupWriteMode
                                     , setGroupIDMode
                                     ]))
+
+-- | A string that will be parsed to get a data size.
+--
+-- Examples: "100 megabytes" or "0.5tb"
+type DataSize = String
+
+swapFile :: FilePath -> DataSize -> Property Linux
+swapFile path size = propertyList ("has a swap file at "++ path) $ props
+    & check (not <$> doesFileExist path)
+      (combineProperties ("create swap file at "++ path) $ props
+          & cmdProperty "fallocate" [ "-l", (show bytes)
+                                    , path ] `assume` MadeChange
+          & cmdProperty "mkswap" [ path ] `assume` MadeChange)
+    & Fstab.mounted "swap" path "swap" mempty
+  where bytes = DataUnits.readSize DataUnits.memoryUnits size
