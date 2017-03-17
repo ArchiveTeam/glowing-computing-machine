@@ -48,9 +48,14 @@ type DataSize = String
 swapFile :: FilePath -> DataSize -> Property Linux
 swapFile path size = propertyList ("has a swap file at "++ path) $ props
     & check (not <$> doesFileExist path)
-      (combineProperties ("create swap file at "++ path) $ props
-          & cmdProperty "fallocate" [ "-l", (show bytes)
-                                    , path ] `assume` MadeChange
-          & cmdProperty "mkswap" [ path ] `assume` MadeChange)
+      (propSize size
+        (\bytes -> combineProperties ("create swap file at "++ path) $ props
+                     & cmdProperty "fallocate" [ "-l", (show bytes)
+                                               , path ] `assume` MadeChange
+                     & cmdProperty "mkswap" [ path ] `assume` MadeChange))
     & Fstab.mounted "swap" path "swap" mempty
-  where bytes = DataUnits.readSize DataUnits.memoryUnits size
+  where propSize :: DataSize -> (Integer -> Property UnixLike) -> Property UnixLike
+        propSize sz f = case DataUnits.readSize DataUnits.memoryUnits sz of
+                          Just bytes -> f bytes
+                          Nothing -> property ("unable to parse swap size " ++ sz) $
+                            return FailedChange
