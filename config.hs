@@ -4,9 +4,10 @@
 import Propellor
 import qualified Propellor.Property.Apt as Apt
 import qualified Propellor.Property.Cron as Cron
-import qualified Propellor.Property.User as User
 import qualified Propellor.Property.Git as Git
+import qualified Propellor.Property.Hostname as Hostname
 import qualified Propellor.Property.HostingProvider.DigitalOcean as DigitalOcean
+import qualified Propellor.Property.User as User
 import qualified JSMESS
 import System.Directory
 import System.FilePath.Posix
@@ -25,6 +26,7 @@ buildmachine = host "glowing-computing-machine.db48x.net" $ props
     & osBuntish "16.04" X86_64
     & DigitalOcean.distroKernel
     & JSMESS.swapFile "/swap" "4GiB" -- needed about 3GiB of swap in testing, on a machine with 8GiB of ram
+    & Hostname.sane
     & Apt.unattendedUpgrades
     & Apt.installed ["ssh"]
     & User.lockedPassword (User "root")
