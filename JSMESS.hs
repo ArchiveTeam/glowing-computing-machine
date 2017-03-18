@@ -52,7 +52,8 @@ swapFile path size = propertyList ("has a swap file at "++ path) $ props
           (\bytes -> combineProperties ("create swap file at "++ path) $ props
                        & cmdProperty "fallocate" [ "-l", (show bytes)
                                                  , path ] `assume` MadeChange
-                       & cmdProperty "mkswap" [ path ] `assume` MadeChange))
+                       & cmdProperty "mkswap" [ path ] `assume` MadeChange
+                       & File.mode path (combineModes [ ownerReadMode, ownerWriteMode ])))
     & Fstab.mounted "swap" path "swap" mempty
       `onChange` (cmdProperty "swapon" [ path ] `assume` MadeChange)
   where propSize :: DataSize -> (Integer -> Property UnixLike) -> Property UnixLike
