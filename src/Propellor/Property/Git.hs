@@ -77,8 +77,10 @@ cloned owner url dir mbranch = check originurl go
 	go :: Property DebianLike
 	go = property' desc $ \w -> do
 		liftIO $ do
-			whenM (doesDirectoryExist dir) $
-				removeDirectoryRecursive dir
+			whenM (doesDirectoryExist dir) $ do -- if the directory already exists, we nuke it
+				e <- isDirectoryEmpty dir   -- unless it's empty, in which case we keep it
+				unless e $                  -- (it might already have permissions the user wants to keep)
+					removeDirectoryRecursive dir
 			createDirectoryIfMissing True (takeDirectory dir)
 		ensureProperty w $ userScriptProperty owner (catMaybes checkoutcmds)
 			`assume` MadeChange
