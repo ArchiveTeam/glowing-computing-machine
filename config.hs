@@ -51,7 +51,7 @@ buildmachine = host "glowing-computing-machine.db48x.net" $ props
                          , "-C", srcdir </> "emsdk"
                          , "--strip-components=1" ])
     & cmdProperty emsdk [ "update" ] `assume` MadeChange
-    & cmdProperty emsdk [ "install", "sdk-incoming-64bit"
+    & cmdProperty emsdk [ "install", "latest"
                         , "-j4"
                         ] `assume` MadeChange
     & JSMESS.staffOwned (srcdir </> "dosbox")
