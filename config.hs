@@ -1,6 +1,8 @@
 -- This is the main configuration file for Propellor, and is used to build
 -- the propellor program.
 
+import Data.Functor
+import Prelude
 import Propellor
 import qualified Propellor.Property.Apt as Apt
 import qualified Propellor.Property.Cron as Cron
