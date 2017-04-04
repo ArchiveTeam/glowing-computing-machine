@@ -6,6 +6,7 @@ import Prelude
 import Propellor
 import qualified Propellor.Property.Apt as Apt
 import qualified Propellor.Property.Cron as Cron
+import qualified Propellor.Property.File as File
 import qualified Propellor.Property.Git as Git
 import qualified Propellor.Property.Hostname as Hostname
 import qualified Propellor.Property.HostingProvider.DigitalOcean as DigitalOcean
@@ -40,9 +41,10 @@ buildmachine = host "glowing-computing-machine.db48x.net" $ props
 --   & JSMESS.admin (User "vito") [""]
     & Apt.installed [ "vim", "emacs-nox", "nano" ] -- gotta have the right editor
     & Apt.installed [ "mosh", "tmux", "screen" ]
-    & Apt.buildDep [ "mame", "dosbox" ]
+    & Apt.buildDep [ "dosbox" ] -- we also want this for mame, but mame has no src package?
     & Apt.installed [ "build-essential", "cmake", "python2.7", "nodejs", "default-jre" ] -- emscripten's dependencies
-    & JSMESS.staffOwned (srcdir </> "emsdk")
+    & JSMESS.staffOwned (srcdir)
+    & File.dirExists (srcdir </> "emsdk")
     & check (not <$> doesFileExist emsdktar)
       (cmdProperty "wget" [ "https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-portable.tar.gz"
                           , "-O", emsdktar ])
@@ -54,10 +56,10 @@ buildmachine = host "glowing-computing-machine.db48x.net" $ props
     & cmdProperty emsdk [ "install", "latest"
                         , "-j4"
                         ] `assume` MadeChange
-    & JSMESS.staffOwned (srcdir </> "dosbox")
+    & File.dirExists (srcdir </> "dosbox")
     & Git.cloned (User "db48x") "https://github.com/dreamlayers/em-dosbox/" (srcdir </> "dosbox") (Just "master")
-    & JSMESS.staffOwned (srcdir </> "mame")
+    & File.dirExists (srcdir </> "mame")
     & Git.cloned (User "db48x") "https://github.com/mamedev/mame" (srcdir </> "mame") (Just "master")
-  where srcdir = "/usr/local/src"
+  where srcdir = "/src"
         emsdktar = srcdir </> "emsdk-portable-tar.gz"
         emsdk = (joinPath [ srcdir, "emsdk", "emsdk" ])
