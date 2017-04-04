@@ -3,6 +3,8 @@ module JSMESS ( admin
               , swapFile
               , DataSize ) where
 
+import Data.Functor
+import Prelude
 import Propellor
 import System.Directory
 import System.Posix.Files
@@ -15,12 +17,12 @@ import qualified Propellor.Property.Sudo as Sudo
 import qualified Propellor.Property.Fstab as Fstab
 
 foldi            :: (a -> a -> a) -> a -> [a] -> a
-foldi f z []     = z
+foldi _ z []     = z
 foldi f z (x:xs) = f x (foldi f z (pairs f xs))
 
 pairs            :: (a -> a -> a) -> [a] -> [a]
 pairs f (x:y:t)  = f x y : pairs f t
-pairs f t        = t
+pairs _ t        = t
 
 admin :: User -> [Ssh.PubKeyText] -> Property DebianLike
 admin u@(User n) ks = propertyList ("admin user " ++ n) $ props
