@@ -34,6 +34,7 @@ buildmachine = host "glowing-computing-machine.db48x.net" $ props
     & Apt.installed ["ssh"]
     & User.lockedPassword (User "root")
     & Cron.runPropellor (Cron.Times "30 * * * *")
+    & JSMESS.defaultUmask 0o002
     & JSMESS.admin (User "db48x") [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAAMFoRm8trenxhZWe6dDEB2c6POPbsPfM5ArZep9lU+ db48x@anglachel"
                                   , "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJQkqIgZ7D8WHW5Y3o+fpZC/4xtv/3IQrORJrTPCt7KY db48x@erebor" ]
 --   & JSMESS.admin (User "sketchcow") [""]
@@ -61,5 +62,5 @@ buildmachine = host "glowing-computing-machine.db48x.net" $ props
     & File.dirExists (srcdir </> "mame")
     & Git.cloned (User "db48x") "https://github.com/mamedev/mame" (srcdir </> "mame") (Just "master")
   where srcdir = "/src"
-        emsdktar = srcdir </> "emsdk-portable-tar.gz"
+        emsdktar = srcdir </> "emsdk-portable.tar.gz"
         emsdk = (joinPath [ srcdir, "emsdk", "emsdk" ])

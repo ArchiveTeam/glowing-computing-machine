@@ -1,5 +1,6 @@
 module JSMESS ( admin
               , staffOwned
+              , defaultUmask
               , swapFile
               , DataSize ) where
 
@@ -41,6 +42,12 @@ staffOwned path = propertyList ("path "++ path ++" is owned by staff") $ props
                                     , groupWriteMode
                                     , setGroupIDMode
                                     ]))
+
+defaultUmask :: FileMode -> Property UnixLike -- is this really UnixLike? dunno if BSD does something different
+defaultUmask mask = propertyList ("default umask is "++ (show mask)) $ props
+    & File.lacksLine    f "UMASK\t\t022"
+    & File.containsLine f "UMASK\t\t002"
+  where f = "/etc/login.defs"
 
 -- | A string that will be parsed to get a data size.
 --
