@@ -9,11 +9,14 @@ import Prelude
 import Propellor
 import System.Directory
 import System.Posix.Files
+import System.Posix.Types
+import Text.Printf
 import Utility.FileMode
 import qualified Utility.DataUnits as DataUnits
 import qualified Propellor.Property.File as File
 import qualified Propellor.Property.Ssh as Ssh
 import qualified Propellor.Property.User as User
+import qualified Propellor.Property.Reboot as Reboot
 import qualified Propellor.Property.Sudo as Sudo
 import qualified Propellor.Property.Fstab as Fstab
 
@@ -43,11 +46,14 @@ staffOwned path = propertyList ("path "++ path ++" is owned by staff") $ props
                                     , setGroupIDMode
                                     ]))
 
-defaultUmask :: FileMode -> Property UnixLike -- is this really UnixLike? dunno if BSD does something different
-defaultUmask mask = propertyList ("default umask is "++ (show mask)) $ props
-    & File.lacksLine    f "UMASK\t\t022"
-    & File.containsLine f "UMASK\t\t002"
-  where f = "/etc/login.defs"
+defaultUmask :: CMode -> Property Linux
+defaultUmask (CMode mask) = propertyList ("default umask is "++ m) $ props
+    & setumask `onChange` Reboot.now
+  where m = (printf "%0#3o" mask)
+        setumask = combineProperties ("stuff") $ props
+          & File.containsLine "/etc/defaults/login" ("UMASK=" ++ m)
+          & File.containsLine "/etc/pam.d/common-session" "session optional pam_umask.so"
+
 
 -- | A string that will be parsed to get a data size.
 --
