@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleContexts, GADTs, DeriveDataTypeable #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Propellor.Property.Chroot (
 	debootstrapped,
@@ -12,6 +11,7 @@ module Propellor.Property.Chroot (
 	ChrootTarball(..),
 	noServices,
 	inChroot,
+	exposeTrueLocaldir,
 	-- * Internal use
 	provisioned',
 	propagateChrootInfo,
@@ -47,7 +47,9 @@ data Chroot where
 instance IsContainer Chroot where
 	containerProperties (Chroot _ _ _ h) = containerProperties h
 	containerInfo (Chroot _ _ _ h) = containerInfo h
-	setContainerProperties (Chroot loc b p h) ps = Chroot loc b p (setContainerProperties h ps)
+	setContainerProperties (Chroot loc b p h) ps =
+		let h' = setContainerProperties h ps
+		in Chroot loc b p h'
 
 chrootSystem :: Chroot -> Maybe System
 chrootSystem = fromInfoVal . fromInfo . containerInfo
@@ -119,7 +121,7 @@ debootstrapped conf = bootstrapped (Debootstrapped conf)
 bootstrapped :: ChrootBootstrapper b => b -> FilePath -> Props metatypes -> Chroot
 bootstrapped bootstrapper location ps = c
   where
-	c = Chroot location bootstrapper (propagateChrootInfo c) (host location ps)
+	c = Chroot location bootstrapper propagateChrootInfo (host location ps)
 
 -- | Ensures that the chroot exists and is provisioned according to its
 -- properties.
@@ -135,7 +137,7 @@ provisioned'
 	-> Bool
 	-> RevertableProperty (HasInfo + Linux) Linux
 provisioned' c@(Chroot loc bootstrapper infopropigator _) systemdonly =
-	(infopropigator normalContainerInfo $ setup `describe` chrootDesc c "exists")
+	(infopropigator c normalContainerInfo $ setup `describe` chrootDesc c "exists")
 		<!>
 	(teardown `describe` chrootDesc c "removed")
   where
@@ -154,9 +156,9 @@ provisioned' c@(Chroot loc bootstrapper infopropigator _) systemdonly =
 		property ("removed " ++ loc) $
 			makeChange (removeChroot loc)
 
-type InfoPropagator = (PropagateInfo -> Bool) -> Property Linux -> Property (HasInfo + Linux)
+type InfoPropagator = Chroot -> (PropagateInfo -> Bool) -> Property Linux -> Property (HasInfo + Linux)
 
-propagateChrootInfo :: Chroot -> InfoPropagator
+propagateChrootInfo :: InfoPropagator
 propagateChrootInfo c@(Chroot location _ _ _) pinfo p =
 	propagateContainer location c pinfo $
 		p `setInfoProperty` chrootInfo c
@@ -294,6 +296,38 @@ setInChroot h = h { hostInfo = hostInfo h `addInfo` InfoVal (InChroot True) }
 newtype InChroot = InChroot Bool
 	deriving (Typeable, Show)
 
+-- | Runs an action with the true localdir exposed,
+-- not the one bind-mounted into a chroot. The action is passed the
+-- path containing the contents of the localdir outside the chroot.
+--
+-- In a chroot, this is accomplished by temporily bind mounting the localdir
+-- to a temp directory, to preserve access to the original bind mount. Then
+-- we unmount the localdir to expose the true localdir. Finally, to cleanup,
+-- the temp directory is bind mounted back to the localdir.
+exposeTrueLocaldir :: (FilePath -> Propellor a) -> Propellor a
+exposeTrueLocaldir a = ifM inChroot
+	( withTmpDirIn (takeDirectory localdir) "propellor.tmp" $ \tmpdir ->
+		bracket_
+			(movebindmount localdir tmpdir)
+			(movebindmount tmpdir localdir)
+			(a tmpdir)
+	, a localdir
+	)
+  where
+	movebindmount from to = liftIO $ do
+		run "mount" [Param "--bind", File from, File to]
+		-- Have to lazy unmount, because the propellor process
+		-- is running in the localdir that it's unmounting..
+		run "umount" [Param "-l", File from]
+		-- We were in the old localdir; move to the new one after
+		-- flipping the bind mounts. Otherwise, commands that try
+		-- to access the cwd will fail because it got umounted out
+		-- from under.
+		changeWorkingDirectory "/"
+		changeWorkingDirectory localdir
+	run cmd ps = unlessM (boolSystem cmd ps) $
+		error $ "exposeTrueLocaldir failed to run " ++ show (cmd, ps)
+
 -- | Generates a Chroot that has all the properties of a Host.
 -- 
 -- Note that it's possible to create loops using this, where a host
@@ -303,12 +337,12 @@ hostChroot :: ChrootBootstrapper bootstrapper => Host -> bootstrapper -> FilePat
 hostChroot h bootstrapper d = chroot
   where
 	chroot = Chroot d bootstrapper pinfo h
-	pinfo = propagateHostChrootInfo h chroot
+	pinfo = propagateHostChrootInfo h
 
 -- This is different than propagateChrootInfo in that Info using
 -- HostContext is not made to use the name of the chroot as its context,
 -- but instead uses the hostname of the Host.
-propagateHostChrootInfo :: Host -> Chroot -> InfoPropagator
+propagateHostChrootInfo :: Host -> InfoPropagator
 propagateHostChrootInfo h c pinfo p =
 	propagateContainer (hostName h) c pinfo $
 		p `setInfoProperty` chrootInfo c

@@ -12,6 +12,7 @@ module Propellor.Types (
 	  Host(..)
 	, Property(..)
 	, property
+	, property''
 	, Desc
 	, RevertableProperty(..)
 	, (<!>)
@@ -43,6 +44,8 @@ module Propellor.Types (
 	) where
 
 import Data.Monoid
+import Control.Applicative
+import Prelude
 
 import Propellor.Types.Core
 import Propellor.Types.Info
@@ -56,7 +59,6 @@ import Propellor.Types.ZFS
 -- | The core data type of Propellor, this represents a property
 -- that the system should have, with a descrition, and an action to ensure
 -- it has the property.
--- that have the property.
 --
 -- There are different types of properties that target different OS's,
 -- and so have different metatypes. 
@@ -67,7 +69,7 @@ import Propellor.Types.ZFS
 --
 -- There are many associated type families, which are mostly used
 -- internally, so you needn't worry about them.
-data Property metatypes = Property metatypes Desc (Propellor Result) Info [ChildProperty]
+data Property metatypes = Property metatypes Desc (Maybe (Propellor Result)) Info [ChildProperty]
 
 instance Show (Property metatypes) where
 	show p = "property " ++ show (getDesc p)
@@ -90,11 +92,18 @@ property
 	=> Desc
 	-> Propellor Result
 	-> Property (MetaTypes metatypes)
-property d a = Property sing d a mempty mempty
+property d a = Property sing d (Just a) mempty mempty
+
+property''
+	:: SingI metatypes
+	=> Desc
+	-> Maybe (Propellor Result)
+	-> Property (MetaTypes metatypes)
+property'' d a = Property sing d a mempty mempty
 
 -- | Changes the action that is performed to satisfy a property.
 adjustPropertySatisfy :: Property metatypes -> (Propellor Result -> Propellor Result) -> Property metatypes
-adjustPropertySatisfy (Property t d s i c) f = Property t d (f s) i c
+adjustPropertySatisfy (Property t d s i c) f = Property t d (f <$> s) i c
 
 -- | A property that can be reverted. The first Property is run
 -- normally and the second is run when it's reverted.
@@ -148,7 +157,7 @@ type instance CombinedType (RevertableProperty (MetaTypes x) (MetaTypes x')) (Re
 type instance CombinedType (RevertableProperty (MetaTypes x) (MetaTypes x')) (Property (MetaTypes y)) = Property (MetaTypes (Combine x y))
 type instance CombinedType (Property (MetaTypes x)) (RevertableProperty (MetaTypes y) (MetaTypes y')) = Property (MetaTypes (Combine x y))
 
-type ResultCombiner = Propellor Result -> Propellor Result -> Propellor Result
+type ResultCombiner = Maybe (Propellor Result) -> Maybe (Propellor Result) -> Maybe (Propellor Result)
 
 class Combines x y where
 	-- | Combines together two properties, yielding a property that
@@ -198,3 +207,35 @@ class TightenTargets p where
 
 instance TightenTargets Property where
 	tightenTargets (Property _ d a i c) = Property sing d a i c
+
+-- | Any type of Property is a monoid. When properties x and y are
+-- appended together, the resulting property has a description like
+-- "x and y". Note that when x fails to be ensured, it will not
+-- try to ensure y.
+instance SingI metatypes => Monoid (Property (MetaTypes metatypes))
+  where
+	mempty = Property sing "noop property" Nothing mempty mempty
+	mappend (Property _ d1 a1 i1 c1) (Property _ d2 a2 i2 c2) =
+	  	Property sing d (a1 <> a2) (i1 <> i2) (c1 <> c2)
+	  where
+		-- Avoid including "noop property" in description
+		-- when using eg mconcat.
+		d = case (a1, a2) of
+			(Just _, Just _) -> d1 <> " and " <> d2
+			(Just _, Nothing) -> d1
+			(Nothing, Just _) -> d2
+			(Nothing, Nothing) -> d1
+
+-- | Any type of RevertableProperty is a monoid. When revertable 
+-- properties x and y are appended together, the resulting revertable
+-- property has a description like "x and y".
+-- Note that when x fails to be ensured, it will not try to ensure y.
+instance
+	( Monoid (Property setupmetatypes)
+	, Monoid (Property undometatypes)
+	)
+	=> Monoid (RevertableProperty setupmetatypes undometatypes)
+  where
+	mempty = RevertableProperty mempty mempty
+	mappend (RevertableProperty s1 u1) (RevertableProperty s2 u2) =
+		RevertableProperty (s1 <> s2) (u2 <> u1)

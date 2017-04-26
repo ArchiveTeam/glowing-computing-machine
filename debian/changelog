@@ -1,15 +1,49 @@
-propellor (3.5.0) UNRELEASED; urgency=medium
+propellor (4.0.3) unstable; urgency=medium
 
-  * Added Apache.confEnabled.
+  * Added Fstab.listed, Fstab.swap, and Mount.swapOn properties.
+    Thanks, Daniel Brooks.
+  * Added Propellor.Property.Bootstrap, which can be used to make
+    disk images contain their own installation of propellor.
+
+ -- Joey Hess <id@joeyh.name>  Thu, 20 Apr 2017 00:54:32 -0400
+
+propellor (4.0.2) unstable; urgency=medium
+
+  * Apt.mirror can be used to set the preferred apt mirror of a host,
+    overriding the default CDN. This info is used by 
+    Apt.stdSourcesList and Sbuild.builtFor.
+    Thanks, Sean Whitton.
+  * Property.Partition: Update kpartx output parser, as its output format
+    changed around version 0.6. Both output formats are supported now.
+  * Fix bug when using setContainerProps with a chroot that prevented
+    properties added to a chroot that way from being seen when propellor
+    was running inside the chroot. This affected disk image creation, and
+    possibly other things that use chroots.
+
+ -- Joey Hess <id@joeyh.name>  Fri, 24 Mar 2017 14:04:50 -0400
+
+propellor (4.0.1) unstable; urgency=medium
+
+  * Fix build with pre-AMP ghc.
+  * Tor: Restart daemon after installing private key.
+  * Tor.named, Tor.torPrivKey: Include the new ed25519 public/private key
+    pair in addition to the old secret_id_key.
+
+ -- Joey Hess <id@joeyh.name>  Sun, 19 Mar 2017 16:18:11 -0400
+
+propellor (4.0.0) unstable; urgency=medium
+
+  * Added Monoid instances for Property and RevertableProperty.
+  * Removed applyToList. Instead, use mconcat. (API change)
+    If you had:  applyToList accountFor [User "joey", User "root"]
+    use instead: mconcat (map accountFor [User "joey", User "root"])
   * Makefile: Removed "run" target which was default target.
     "make" now only builds propellor, does not run it.
     Note that propellor 1.0.0 and earlier relied on this target for
     the Cron.runPropellor property's cronjob to work, so upgrading
-    directly to this version from 1.0.0 would break that cron job.
+    directly from 1.0.0 to 4.0.0 would break that cron job.
   * Remove make from propellor's dependency list; it's not used by
     propellor any longer.
-  * Changed Chroot data type to include Info propigation.
-    (API change)
   * Implemented hostChroot, as originally seen in my slides at
     Linux.Conf.Au 2017 in January. Now that it's not vaporware, it allows
     one Host to build a disk image that has all the properties of another
@@ -20,8 +54,15 @@ propellor (3.5.0) UNRELEASED; urgency=medium
     creation and servers will not be running in it.
   * The IsInfo types class's propagateInfo function changed to use a
     PropagateInfo data type. (API change)
+  * The action used to satisfy a property changed to Maybe (Propellor Result).
+    When it is Nothing, propellor knows it can skip displaying the
+    description of that property. This is mostly useful in the
+    implementation of mempty. (API change)
+  * The doNothing property is now simply mempty. The name was retained
+    because it can be clearer than mempty in some contexts.
+  * Added Apache.confEnabled.
 
- -- Joey Hess <id@joeyh.name>  Wed, 08 Mar 2017 14:02:10 -0400
+ -- Joey Hess <id@joeyh.name>  Wed, 15 Mar 2017 15:46:42 -0400
 
 propellor (3.4.1) unstable; urgency=medium
 

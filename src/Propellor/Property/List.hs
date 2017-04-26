@@ -43,6 +43,13 @@ propertyList desc (Props ps) =
 
 -- | Combines a list of properties, resulting in one property that
 -- ensures each in turn. Stops if a property fails.
+--
+-- > combineProperties "foo" $ props
+-- > 	& bar
+-- > 	& baz
+--
+-- This is similar to using `mconcat` with a list of properties,
+-- except it can combine together different types of properties.
 combineProperties :: SingI metatypes => Desc -> Props (MetaTypes metatypes) -> Property (MetaTypes metatypes)
 combineProperties desc (Props ps) = 
 	property desc (combineSatisfy cs NoChange)
@@ -53,7 +60,7 @@ combineProperties desc (Props ps) =
 combineSatisfy :: [ChildProperty] -> Result -> Propellor Result
 combineSatisfy [] rs = return rs
 combineSatisfy (p:ps) rs = do
-	r <- catchPropellor $ getSatisfy p
+	r <- maybe (return NoChange) catchPropellor (getSatisfy p)
 	case r of
 		FailedChange -> return FailedChange
 		_ -> combineSatisfy ps (r <> rs)
