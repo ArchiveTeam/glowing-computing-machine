@@ -51,7 +51,7 @@ defaultUmask (CMode mask) = propertyList ("default umask is "++ m) $ props
     & setumask `onChange` Reboot.now
   where m = (printf "%0#3o" mask)
         setumask = combineProperties ("stuff") $ props
-          & File.containsLine "/etc/defaults/login" ("UMASK=" ++ m)
+          & File.containsLine "/etc/login.defs" ("UMASK " ++ m)
           & File.containsLine "/etc/pam.d/common-session" "session optional pam_umask.so"
 
 
